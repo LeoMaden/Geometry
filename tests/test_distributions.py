@@ -14,7 +14,7 @@ def main():
     # Left point clustering with fixed initial step size
     plt.figure()
     plt.plot(cluster_left(0, 1, 20, delta=0.01), "ro", label=r"$\delta=0.01$")
-    plt.plot(cluster_left(0, 1, 20, delta=0.1), "bo", label=r"$\delta=0.1$")
+    plt.plot(cluster_left(0, 1, 20, delta=0.001), "bo", label=r"$\delta=0.001$")
     plt.legend()
     plt.grid()
 
@@ -28,14 +28,14 @@ def main():
     # Double sided clustering
     plt.figure()
     plt.plot(
-        double_sided(0, 1, 20, 0.2, delta=0.001),
+        double_sided(0, 1, 20, 0.2, delta=0.01),
         "ro",
-        label=r"$\alpha=0.20, \delta=0.001$",
+        label=r"$\alpha=0.20, \delta=0.01$",
     )
     plt.plot(
-        double_sided(0, 1, 20, 0.35, delta=0.001),
+        double_sided(0, 1, 20, 0.35, delta=0.01),
         "bo",
-        label=r"$\alpha=0.35, \delta=0.001$",
+        label=r"$\alpha=0.35, \delta=0.01$",
     )
     plt.plot(
         double_sided(0, 1, 20, 0.2, r=1.1),

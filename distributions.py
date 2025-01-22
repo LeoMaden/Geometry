@@ -6,25 +6,32 @@ def _calc_clustering(a, b, N, r, delta):
         raise Exception("Must provide one of `r` or `delta`")
 
     if r is not None:
-        delta = (b - a) / (r ** (N - 1) - 1)
+        delta = (b - a) * ((1 - r) / (1 - r ** (N - 1)))
     elif delta is not None:
-        r = ((b - a + delta) / delta) ** (1 / (N - 1))
+        A = (b - a) / delta
+        coef = np.zeros(N)
+        coef[0] = 1
+        coef[-2] = -A
+        coef[-1] = A - 1
+        roots = np.roots(coef)
+        r = np.max(roots[roots.imag == 0]).real
 
-    spacing = np.geomspace(delta, b - a + delta, N)  # type: ignore
+    spacing = np.geomspace(delta, delta * r ** (N - 2), N - 1)  # type: ignore
     return spacing, r, delta
 
 
 def cluster_left(a: float, b: float, N: int, *, r=None, delta=None):
     spacing, r, delta = _calc_clustering(a, b, N, r, delta)
-    print("left", f"{r=}")
-    arr = a - delta + spacing  # type: ignore
+    arr = np.r_[a, a + np.cumsum(spacing)]
+    arr[-1] = b
     return arr
 
 
 def cluster_right(a: float, b: float, N: int, *, r=None, delta=None):
     spacing, r, delta = _calc_clustering(a, b, N, r, delta)
-    spacing = -spacing[::-1]
-    arr = b - (-delta) + spacing  # type: ignore
+    spacing = spacing[::-1]
+    arr = np.r_[a, a + np.cumsum(spacing)]
+    arr[-1] = b
     return arr
 
 
@@ -38,27 +45,20 @@ def double_sided(a, b, N: int, alpha, *, r=None, delta=None):
         raise Exception("Must provide one of `r` or `delta`")
 
     if r is not None:
-        C = (N_centre + 3) * r ** (N_left - 1) - (N_centre + 1) * r ** (N_left - 2) - 2
-        delta = (b - a) / C
+        C = 2 * (1 - r ** (N_left - 1)) + (1 - r) * (N_centre + 1) * r ** (N_left - 2)
+        delta = (1 - r) * (b - a) / C
     elif delta is not None:
         coef = np.zeros(N_left)
         coef[0] = delta * (N_centre + 3)
         coef[1] = -delta * (N_centre + 1)
-        coef[-1] = a - b - 2 * delta
+        coef[-2] = -(b - a)
+        coef[-1] = b - a - 2 * delta
         roots = np.roots(coef)
-        r = roots[roots.imag == 0][0].real
+        r = max(roots[roots.imag == 0]).real
 
-    geom_width = (r ** (N_left - 1) - 1) * delta
+    geom_width = delta * ((1 - r ** (N_left - 1)) / (1 - r))
     b1 = a + geom_width
     a2 = b - geom_width
-
-    print(f"{b1=}, {a2=}")
-    print(f"{a2-b1=}")
-
-    Delta = (r ** (N_left - 1) - r ** (N_left - 2)) * delta
-    print("Delta", Delta)
-    print("b1 should be:", a + (r ** (N_left - 1) - 1) * delta)
-    print("a2-b1 should be:", (N_centre + 1) * Delta)
 
     left = cluster_left(a, b1, N_left, delta=delta)
     right = cluster_right(a2, b, N_right, delta=delta)
