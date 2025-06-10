@@ -138,12 +138,16 @@ class Curve:
     def __iter__(self) -> Iterator[tuple[np.floating, NDArray]]:
         yield from zip(self.param, self.coords)
 
-    def __add__(self, other: Self) -> Self:
-        if self.param != other.param:
-            msg = "Curves must have same parameterisation in order to be added."
-            raise ValueError(msg)
+    def __add__(self, other) -> Self:
+        if isinstance(other, Curve):
+            if self.param != other.param:
+                msg = "Curves must have same parameterisation in order to be added."
+                raise ValueError(msg)
+            rhs = other.coords
+        else:
+            rhs = other
 
-        new_coords = self.coords + other.coords
+        new_coords = self.coords + rhs
         return self.new(new_coords, self.param)
 
     def __getitem__(self, key) -> Self:
