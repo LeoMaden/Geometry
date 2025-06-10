@@ -1,5 +1,5 @@
-from typing import Literal
-from scipy.interpolate import interpn
+from typing import Literal, Optional
+from scipy.interpolate import interpn, CubicHermiteSpline
 from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
@@ -16,30 +16,6 @@ class SurfacePatch:
     coords: NDArray  # Shape (N, M, D) where D in [2, 3]
     u: NDArray  # Shape (N,)
     v: NDArray  # Shape (M,)
-
-    @classmethod
-    def from_parameter_curves(
-        cls, curves: list[PlaneCurve | SpaceCurve], v: ArrayLike
-    ) -> "SurfacePatch":
-        v = np.asarray(v)
-
-        for c1, c2 in zip(curves[:-1], curves[1:]):
-            if not np.all(c1.param == c2.param):
-                msg = "Curves must be defined with the same parameterisation."
-                raise ValueError(msg)
-        if len(v) != len(curves):
-            msg = "`curves` and `v` must be the same length."
-            raise ValueError(msg)
-
-        u = curves[0].param
-        N, M = len(u), len(v)
-        D = 2 if isinstance(curves[0], PlaneCurve) else 3
-        coords = np.empty((N, M, D))
-
-        for iv, c in enumerate(curves):
-            coords[:, iv] = c.coords
-
-        return SurfacePatch(coords, u, v)
 
     def is_2d(self) -> bool:
         return self.coords.shape[2] == 2
@@ -89,3 +65,19 @@ class SurfacePatch:
             return [cls(self.coords[:, j], self.u) for j in range(nv)]
         else:
             return [cls(self.coords[i, :], self.v) for i in range(nu)]
+
+    def __add__(self, other) -> "SurfacePatch":
+        if isinstance(other, SurfacePatch):
+            rhs = other.coords
+        else:
+            rhs = other
+        coords = self.coords + rhs
+        return SurfacePatch(coords, self.u, self.v)
+
+    def __sub__(self, other) -> "SurfacePatch":
+        if isinstance(other, SurfacePatch):
+            rhs = other.coords
+        else:
+            rhs = other
+        coords = self.coords - rhs
+        return SurfacePatch(coords, self.u, self.v)
