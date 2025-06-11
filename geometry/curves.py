@@ -24,6 +24,15 @@ class Curve:
     def new(cls, coords, param) -> Self:
         return cls(coords, param)
 
+    @classmethod
+    def new_unit_speed(cls, coords) -> Self:
+        delta = _curve_norm(np.diff(coords, axis=0))
+        s = np.r_[0, np.cumsum(delta)]
+        curve = cls(coords, s)
+        if not curve.is_unit:
+            curve._warn_not_unit()
+        return cls(coords, s)
+
     def __post_init__(self) -> None:
         if self.coords.ndim != 2:
             msg = "Coords of curve must have shape (N, D)"
@@ -94,7 +103,7 @@ class Curve:
         return self.new(new_coords, t)
 
     def interpolate_equal(self) -> Self:
-        """Return a new curve with normalised unit-speed parameterisation and
+        """Return a new curve with normalised constant-speed parameterisation and
         equal arc-length between points.
         """
         t_equal = np.linspace(0, 1, len(self.param))
@@ -113,11 +122,7 @@ class Curve:
         s = self.arc_length()
         new_curve = self.reparameterise(s)
         if not new_curve.is_unit:
-            msg = (
-                "Resulting curve is not unit speed.\n"
-                "Increase the number of points along the curve."
-            )
-            warnings.warn(msg)
+            new_curve._warn_not_unit()
         return new_curve
 
     def normalise(self) -> Self:
@@ -140,7 +145,7 @@ class Curve:
 
     def __add__(self, other) -> Self:
         if isinstance(other, Curve):
-            if self.param != other.param:
+            if not np.all(self.param == other.param):
                 msg = "Curves must have same parameterisation in order to be added."
                 raise ValueError(msg)
             rhs = other.coords
@@ -150,10 +155,41 @@ class Curve:
         new_coords = self.coords + rhs
         return self.new(new_coords, self.param)
 
+    def __sub__(self, other) -> Self:
+        if isinstance(other, Curve):
+            if not np.all(self.param == other.param):
+                msg = "Curves must have same parameterisation in order to be added."
+                raise ValueError(msg)
+            rhs = other.coords
+        else:
+            rhs = other
+
+        new_coords = self.coords - rhs
+        return self.new(new_coords, self.param)
+
+    def __mul__(self, other) -> Self:
+        if isinstance(other, Curve):
+            if not np.all(self.param == other.param):
+                msg = "Curves must have same parameterisation in order to be added."
+                raise ValueError(msg)
+            rhs = other.coords
+        else:
+            rhs = other
+        new_coords = self.coords * rhs
+        return self.new(new_coords, self.param)
+
     def __getitem__(self, key) -> Self:
         coords = self.coords[key]
         param = self.param[key]
         return self.new(coords, param)
+
+    def _warn_not_unit(self) -> None:
+        avg_speed = self.dot().norm().mean()
+        msg = (
+            f"Curve is not unit speed (average speed = {avg_speed:.2f}).\n"
+            "Increase the number of points along the curve."
+        )
+        warnings.warn(msg)
 
 
 @dataclass(frozen=True)
