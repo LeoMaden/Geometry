@@ -291,3 +291,12 @@ def _curve_norm(vectors: ArrayLike) -> NDArray:
 
 def _integrate_from_zero(y: ArrayLike, x: ArrayLike) -> NDArray:
     return cumulative_simpson(y, x=x, initial=0)
+
+
+def plot_plane_curve(curve: PlaneCurve, ax=None, *args, **kwargs):
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        _, ax = plt.subplots()
+
+    plt.plot(curve.coords[:, 0], curve.coords[:, 1], *args, **kwargs)
