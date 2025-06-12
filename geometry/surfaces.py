@@ -1,3 +1,4 @@
+from itertools import product
 from typing import Literal, Optional
 from scipy.interpolate import interpn, CubicHermiteSpline
 from dataclasses import dataclass
@@ -9,19 +10,13 @@ from geometry.curves import PlaneCurve, SpaceCurve
 
 @dataclass
 class SurfacePatch:
-    """Represents a surface patch in R^2 or R^3 parameterised by a rectangular grid
+    """Represents a surface patch in R^3 parameterised by a rectangular grid
     of `u` and `v` values.
     """
 
-    coords: NDArray  # Shape (N, M, D) where D in [2, 3]
+    coords: NDArray  # Shape (N, M, 3)
     u: NDArray  # Shape (N,)
     v: NDArray  # Shape (M,)
-
-    def is_2d(self) -> bool:
-        return self.coords.shape[2] == 2
-
-    def is_3d(self) -> bool:
-        return self.coords.shape[2] == 3
 
     def grad_u(self) -> "SurfacePatch":
         grad_u = np.gradient(self.coords, self.u, axis=0)
@@ -51,20 +46,13 @@ class SurfacePatch:
         )
         return SurfacePatch(coords, u, v)
 
-    def parameter_curves(
-        self, const_axis: Literal["u", "v"]
-    ) -> list[PlaneCurve | SpaceCurve]:
-        if self.is_2d():
-            cls = PlaneCurve
-        else:
-            cls = SpaceCurve
-
+    def parameter_curves(self, const_axis: Literal["u", "v"]) -> list[SpaceCurve]:
         nu, nv = self.coords.shape[:2]
 
         if const_axis == "v":
-            return [cls(self.coords[:, j], self.u) for j in range(nv)]
+            return [SpaceCurve(self.coords[:, j], self.u) for j in range(nv)]
         else:
-            return [cls(self.coords[i, :], self.v) for i in range(nu)]
+            return [SpaceCurve(self.coords[i, :], self.v) for i in range(nu)]
 
     def __add__(self, other) -> "SurfacePatch":
         if isinstance(other, SurfacePatch):
