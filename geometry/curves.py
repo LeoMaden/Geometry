@@ -143,39 +143,24 @@ class Curve:
     def __iter__(self) -> Iterator[tuple[np.floating, NDArray]]:
         yield from zip(self.param, self.coords)
 
-    def __add__(self, other) -> Self:
-        if isinstance(other, Curve):
-            if not np.all(self.param == other.param):
-                msg = "Curves must have same parameterisation in order to be added."
-                raise ValueError(msg)
-            rhs = other.coords
-        else:
-            rhs = other
+    def __mul__(self, other) -> Self:
+        rhs = self._get_bop_rhs(other)
+        new_coords = self.coords * rhs
+        return self.new(new_coords, self.param)
 
+    def __truediv__(self, other) -> Self:
+        rhs = self._get_bop_rhs(other)
+        new_coords = self.coords / rhs
+        return self.new(new_coords, self.param)
+
+    def __add__(self, other) -> Self:
+        rhs = self._get_bop_rhs(other)
         new_coords = self.coords + rhs
         return self.new(new_coords, self.param)
 
     def __sub__(self, other) -> Self:
-        if isinstance(other, Curve):
-            if not np.all(self.param == other.param):
-                msg = "Curves must have same parameterisation in order to be added."
-                raise ValueError(msg)
-            rhs = other.coords
-        else:
-            rhs = other
-
+        rhs = self._get_bop_rhs(other)
         new_coords = self.coords - rhs
-        return self.new(new_coords, self.param)
-
-    def __mul__(self, other) -> Self:
-        if isinstance(other, Curve):
-            if not np.all(self.param == other.param):
-                msg = "Curves must have same parameterisation in order to be added."
-                raise ValueError(msg)
-            rhs = other.coords
-        else:
-            rhs = other
-        new_coords = self.coords * rhs
         return self.new(new_coords, self.param)
 
     def __getitem__(self, key) -> Self:
@@ -190,6 +175,16 @@ class Curve:
             "Increase the number of points along the curve."
         )
         warnings.warn(msg)
+
+    def _get_bop_rhs(self, other):
+        if isinstance(other, Curve):
+            if not np.all(self.param == other.param):
+                msg = "Curves must have same parameterisation in order to be added."
+                raise ValueError(msg)
+            rhs = other.coords
+        else:
+            rhs = other
+        return rhs
 
 
 @dataclass(frozen=True)
