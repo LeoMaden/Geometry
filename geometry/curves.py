@@ -297,6 +297,10 @@ def plot_plane_curve(curve: PlaneCurve, ax=None, *args, **kwargs):
     import matplotlib.pyplot as plt
 
     if ax is None:
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
+
+    fig = ax.figure
 
     plt.plot(curve.coords[:, 0], curve.coords[:, 1], *args, **kwargs)
+
+    return fig
