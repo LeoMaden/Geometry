@@ -1,3 +1,4 @@
+from intersect import intersection
 from dataclasses import dataclass, field
 from typing import Generic, Iterator, Self, TypeVar
 import warnings
@@ -209,6 +210,14 @@ class PlaneCurve(Curve):
         y = _integrate_from_zero(np.sin(angle), x=t)
         return cls(np.c_[x, y], t)
 
+    @property
+    def x(self) -> NDArray:
+        return self.coords[:, 0]
+
+    @property
+    def y(self) -> NDArray:
+        return self.coords[:, 1]
+
     def turning_angle(self) -> NDArray:
         tangent = self.tangent()
         tx, ty = tangent.coords[:, 0], tangent.coords[:, 1]
@@ -226,6 +235,12 @@ class PlaneCurve(Curve):
         dtdt_coords = t.dot().coords
         signed_curvature = np.vecdot(dtdt_coords, ns_coords) / dot.norm()
         return signed_curvature
+
+    def intersect(self, other) -> NDArray:
+        return np.c_[intersection(self.x, self.y, other.x, other.y)]
+
+    def intersect_coords(self, coords) -> NDArray:
+        return np.c_[intersection(self.x, self.y, coords[:, 0], coords[:, 1])]
 
 
 @dataclass(frozen=True)
