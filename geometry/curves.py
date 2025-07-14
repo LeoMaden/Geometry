@@ -27,12 +27,9 @@ class Curve:
 
     @classmethod
     def new_unit_speed(cls, coords) -> Self:
-        delta = _curve_norm(np.diff(coords, axis=0))
-        s = np.r_[0, np.cumsum(delta)]
-        curve = cls(coords, s)
-        if not curve.is_unit:
-            curve._warn_not_unit()
-        return cls(coords, s)
+        param = np.arange(coords.shape[0])
+        curve = cls(coords, param).reparameterise_unit()
+        return curve
 
     def __post_init__(self) -> None:
         if self.coords.ndim != 2:
@@ -48,8 +45,7 @@ class Curve:
     @cached_property
     def is_unit(self) -> bool:
         """True if this curve has unit speed along its length."""
-        dot = _curve_deriv(self.coords, self.param)
-        speed = _curve_norm(dot)
+        speed = self.dot().norm()
         return np.allclose(speed, 1.0, atol=CLOSE_TOL)
 
     def dot(self) -> Self:
@@ -88,9 +84,10 @@ class Curve:
         """Return the arc-length of each point along the curve, starting at zero."""
         if self.is_unit:
             return self.param
-        dot = self.dot()
         delta = _curve_norm(np.diff(self.coords, axis=0))
         return np.r_[0, np.cumsum(delta)]
+        # speed = self.dot().norm()
+        # return _integrate_from_zero(speed, self.param)
 
     def interpolate(self, t: ArrayLike, *args, **kwargs) -> Self:
         """Return a new curve formed by interpolating coordinates of this curve
