@@ -306,8 +306,4 @@ def plot_plane_curve(curve: PlaneCurve, ax=None, *args, **kwargs):
     if ax is None:
         fig, ax = plt.subplots()
 
-    fig = ax.figure
-
-    plt.plot(curve.coords[:, 0], curve.coords[:, 1], *args, **kwargs)
-
-    return fig
+    ax.plot(curve.coords[:, 0], curve.coords[:, 1], *args, **kwargs)
