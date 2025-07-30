@@ -20,6 +20,7 @@ CLOSE_TOL = 1e-5
 class Curve:
     coords: NDArray  # Must be (N, D)
     param: NDArray  # Must be (N,)
+    _is_unit_cache: dict[str, bool] = field(default_factory=dict, init=False, repr=False)
 
     @classmethod
     def new(cls, coords, param) -> Self:
@@ -72,12 +73,11 @@ class Curve:
         """
         # Simple instance-based cache to avoid hashing issues with numpy arrays
         cache_key = f"is_unit_{atol}"
-        if not hasattr(self, '_is_unit_cache'):
-            object.__setattr__(self, '_is_unit_cache', {})
         
         if cache_key not in self._is_unit_cache:
             speed = self.dot().norm()
             result = np.allclose(speed, 1.0, atol=atol)
+            # Use object.__setattr__ to modify frozen dataclass
             self._is_unit_cache[cache_key] = result
         
         return self._is_unit_cache[cache_key]
@@ -111,7 +111,7 @@ class Curve:
     def curvature(self, atol: float = CLOSE_TOL) -> NDArray:
         """Return the curvature at each point along the curve.
 
-        Args
+        Args:
             atol: Absolute tolerance for unit speed check.
         """
         if self.is_unit(atol):
@@ -185,7 +185,7 @@ class Curve:
         """
         s = self.arc_length()
         new_curve = self.reparameterise(s)
-        if not new_curve.is_unit:
+        if not new_curve.is_unit():
             avg_speed = new_curve.dot().norm().mean()
             if strict:
                 raise ValueError(
@@ -360,11 +360,12 @@ class SpaceCurve(Curve):
 
     def curvature(self, atol: float = CLOSE_TOL) -> NDArray:
         """Return the curvature at each point along the curve (optimized for 3D).
-
+        
         Args:
             atol: Absolute tolerance for unit speed check (unused in 3D formula).
         """
-        # Can improve curvature calculation slightly in R^3
+        # Can improve curvature calculation slightly in R^3 
+        # Note: atol parameter maintained for API consistency but unused here
         dot = self.dot()
         ddot = dot.dot()
         A = _curve_norm(np.cross(ddot.coords, dot.coords))
