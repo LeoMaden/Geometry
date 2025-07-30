@@ -20,7 +20,7 @@ CLOSE_TOL = 1e-5
 class Curve:
     coords: NDArray  # Must be (N, D)
     param: NDArray  # Must be (N,)
-    _is_unit_cache: dict[str, bool] = field(default_factory=dict, init=False, repr=False)
+    _property_cache: dict[str, bool] = field(default_factory=dict, init=False, repr=False)
 
     @classmethod
     def new(cls, coords, param) -> Self:
@@ -74,13 +74,30 @@ class Curve:
         # Simple instance-based cache to avoid hashing issues with numpy arrays
         cache_key = f"is_unit_{atol}"
         
-        if cache_key not in self._is_unit_cache:
+        if cache_key not in self._property_cache:
             speed = self.dot().norm()
             result = np.allclose(speed, 1.0, atol=atol)
             # Use object.__setattr__ to modify frozen dataclass
-            self._is_unit_cache[cache_key] = result
+            self._property_cache[cache_key] = result
         
-        return self._is_unit_cache[cache_key]
+        return self._property_cache[cache_key]
+    
+    def is_normalised(self, atol: float = CLOSE_TOL) -> bool:
+        """True if this curve has parameter from 0 to 1.
+
+        Args:
+            atol: Absolute tolerance for normalization check.
+        """
+        cache_key = f"is_normalised_{atol}"
+        
+        if cache_key not in self._property_cache:
+            result = (
+                np.isclose(self.param[0], 0.0, atol=atol) and 
+                np.isclose(self.param[-1], 1.0, atol=atol)
+            )
+            self._property_cache[cache_key] = result
+        
+        return self._property_cache[cache_key]
 
     def dot(self) -> Self:
         """Return a new curve which is the derivative of this curve with
