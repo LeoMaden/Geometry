@@ -47,7 +47,10 @@ class Curve:
         if param.ndim != 1:
             raise ValueError("Param of curve must have shape (N,)")
         if coords.shape[0] != param.shape[0]:
-            raise ValueError("Coords and param must have the same length")
+            raise ValueError(
+                f"Coords and param must have the same length: "
+                f"coords has {coords.shape[0]} points, param has {param.shape[0]} points"
+            )
 
         # Check for empty arrays
         if coords.size == 0 or param.size == 0:
@@ -98,6 +101,11 @@ class Curve:
             self._property_cache[cache_key] = result
         
         return self._property_cache[cache_key]
+
+    @property
+    def num_points(self) -> int:
+        """Return the number of points in the curve."""
+        return len(self.param)
 
     def dot(self) -> Self:
         """Return a new curve which is the derivative of this curve with
