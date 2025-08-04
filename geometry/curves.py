@@ -20,7 +20,9 @@ CLOSE_TOL = 1e-5
 class Curve:
     coords: NDArray  # Must be (N, D)
     param: NDArray  # Must be (N,)
-    _property_cache: dict[str, bool] = field(default_factory=dict, init=False, repr=False)
+    _property_cache: dict[str, bool] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     @classmethod
     def new(cls, coords, param) -> Self:
@@ -76,15 +78,15 @@ class Curve:
         """
         # Simple instance-based cache to avoid hashing issues with numpy arrays
         cache_key = f"is_unit_{atol}"
-        
+
         if cache_key not in self._property_cache:
             speed = self.dot().norm()
             result = np.allclose(speed, 1.0, atol=atol)
             # Use object.__setattr__ to modify frozen dataclass
             self._property_cache[cache_key] = result
-        
+
         return self._property_cache[cache_key]
-    
+
     def is_normalised(self, atol: float = CLOSE_TOL) -> bool:
         """True if this curve has parameter from 0 to 1.
 
@@ -92,14 +94,13 @@ class Curve:
             atol: Absolute tolerance for normalization check.
         """
         cache_key = f"is_normalised_{atol}"
-        
+
         if cache_key not in self._property_cache:
-            result = (
-                np.isclose(self.param[0], 0.0, atol=atol) and 
-                np.isclose(self.param[-1], 1.0, atol=atol)
+            result = np.isclose(self.param[0], 0.0, atol=atol) and np.isclose(
+                self.param[-1], 1.0, atol=atol
             )
             self._property_cache[cache_key] = result
-        
+
         return self._property_cache[cache_key]
 
     @property
@@ -252,6 +253,11 @@ class Curve:
         kappa = self.curvature()
         return self.new(kappa[:, np.newaxis], self.param)
 
+    @property
+    def is_closed(self) -> bool:
+        """Check if the curve is closed (start and end points are the same)."""
+        return np.allclose(self.start(), self.end(), atol=CLOSE_TOL)
+
     def __iter__(self) -> Iterator[tuple[np.floating, NDArray]]:
         yield from zip(self.param, self.coords)
 
@@ -385,11 +391,11 @@ class SpaceCurve(Curve):
 
     def curvature(self, atol: float = CLOSE_TOL) -> NDArray:
         """Return the curvature at each point along the curve (optimized for 3D).
-        
+
         Args:
             atol: Absolute tolerance for unit speed check (unused in 3D formula).
         """
-        # Can improve curvature calculation slightly in R^3 
+        # Can improve curvature calculation slightly in R^3
         # Note: atol parameter maintained for API consistency but unused here
         dot = self.dot()
         ddot = dot.dot()
