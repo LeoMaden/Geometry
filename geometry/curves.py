@@ -1,7 +1,7 @@
+import logging
 from intersect import intersection
 from dataclasses import dataclass, field
 from typing import Generic, Iterator, Self, TypeVar
-import warnings
 from scipy.integrate import cumulative_simpson, simpson
 from scipy.interpolate import make_interp_spline, BSpline
 from functools import partial
@@ -13,7 +13,9 @@ ROT_90_DEG = np.array([[0, -1], [1, 0]])
 
 
 norm = partial(np.linalg.norm, axis=-1)
-CLOSE_TOL = 1e-5
+CLOSE_TOL = 1e-4
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -66,9 +68,7 @@ class Curve:
 
         # Check parameter monotonicity (warning only)
         if len(param) > 1 and not np.all(np.diff(param) >= 0):
-            warnings.warn(
-                "Parameter values are not monotonically increasing", UserWarning
-            )
+            raise ValueError("Parameter values are not monotonically increasing")
 
     def is_unit(self, atol: float = CLOSE_TOL) -> bool:
         """True if this curve has unit speed along its length.
@@ -176,10 +176,9 @@ class Curve:
         # Check bounds for extrapolation warning
         t_min, t_max = self.param[0], self.param[-1]
         if np.any(t < t_min) or np.any(t > t_max):
-            warnings.warn(
+            _logger.warning(
                 f"Interpolation parameter outside bounds [{t_min:.3f}, {t_max:.3f}]. "
                 "Extrapolation may be inaccurate.",
-                UserWarning,
             )
 
         spl: BSpline = make_interp_spline(self.param, self.coords, *args, **kwargs)
@@ -212,18 +211,18 @@ class Curve:
         s = self.arc_length()
         new_curve = self.reparameterise(s)
         if not new_curve.is_unit():
-            avg_speed = new_curve.dot().norm().mean()
+            speed = new_curve.dot().norm()
+            min_speed = speed.min()
+            max_speed = speed.max()
+            msg = (
+                f"Failed to create unit speed curve: min speed = {min_speed:.6f}, "
+                f"max speed = {max_speed:.6f}. "
+                "Consider increasing point density."
+            )
             if strict:
-                raise ValueError(
-                    f"Failed to create unit speed curve (avg speed = {avg_speed:.3f}). "
-                    "Consider increasing point density."
-                )
+                raise ValueError(msg)
             else:
-                warnings.warn(
-                    f"Curve is not unit speed (avg speed = {avg_speed:.3f}). "
-                    "Consider increasing point density.",
-                    UserWarning,
-                )
+                _logger.warning(msg)
         return new_curve
 
     def normalise(self) -> Self:
@@ -437,8 +436,3 @@ def _curve_norm(vectors: ArrayLike) -> NDArray:
 
 def _integrate_from_zero(y: ArrayLike, x: ArrayLike) -> NDArray:
     return cumulative_simpson(y, x=x, initial=0)
-
-
-def plot_plane_curve(curve: PlaneCurve, ax=None, *args, **kwargs):
-    """Legacy function - use curve.plot() method instead."""
-    return curve.plot(ax, *args, **kwargs)
